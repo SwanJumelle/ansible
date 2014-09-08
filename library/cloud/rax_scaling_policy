@@ -167,6 +167,8 @@ def rax_asp(module, at=None, change=0, cron=None, cooldown=300,
                                        is_percent=is_percent,
                                        desired_capacity=desired_capacity,
                                        args=args)
+                if webhook_name and policy_type == 'webhook':
+                    webhook = sg.add_webhook(policy, name=webhook_name)
                 changed = True
             except Exception, e:
                 module.fail_json(msg='%s' % e.message)
@@ -199,14 +201,26 @@ def rax_asp(module, at=None, change=0, cron=None, cooldown=300,
             if hasattr(policy, 'args') and args != policy.args:
                 kwargs['args'] = args
 
+            if webhook_name and policy_type == 'webhook':
+                webhooks_lst = filter(lambda p: webhook_name == p.name, sg.list_webhooks(policy))
+                try:
+                    if not webhooks_lst:
+                        webhook = sg.add_webhook(policy, name=webhook_name)
+                        changed = True
+                    else:
+                        webhook = webhooks_lst[0]
+                except Exception, e:
+                    module.fail_json(msg='%s' % e.message)
             if kwargs:
                 policy.update(**kwargs)
                 changed = True
 
         policy.get()
 
-        module.exit_json(changed=changed, autoscale_policy=rax_to_dict(policy))
-
+        if webhook_name and policy_type == 'webhook':
+            module.exit_json(changed=changed, autoscale_policy=to_dict(policy), webhook_policy=to_dict(webhook))
+        else:
+            module.exit_json(changed=changed, autoscale_policy=to_dict(policy))
     else:
         try:
             policies = filter(lambda p: name == p.name, sg.list_policies())
