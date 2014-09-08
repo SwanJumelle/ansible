@@ -142,7 +142,7 @@ def to_dict(obj):
 
 def rax_asp(module, at=None, change=0, cron=None, cooldown=300,
             desired_capacity=0, is_percent=False, name=None,
-            policy_type=None, scaling_group=None, state='present'):
+            policy_type=None, webhook_name=None, scaling_group=None, state='present'):
     changed = False
 
     au = pyrax.autoscale
@@ -182,6 +182,8 @@ def rax_asp(module, at=None, change=0, cron=None, cooldown=300,
                                        is_percent=is_percent,
                                        desired_capacity=desired_capacity,
                                        args=args)
+                if webhook_name and policy_type == 'webhook':
+                    sg.add_webhook(policy, name=webhook_name)
                 changed = True
             except Exception, e:
                 module.fail_json(msg='%s' % e.message)
@@ -213,6 +215,15 @@ def rax_asp(module, at=None, change=0, cron=None, cooldown=300,
 
             if hasattr(policy, 'args') and args != policy.args:
                 kwargs['args'] = args
+
+            if webhook_name and policy_type == 'webhook':
+                webhooks_lst = filter(lambda p: webhook_name == p.name, sg.list_webhooks(policy))
+                try:
+                    if not webhooks_lst:
+                        sg.add_webhook(policy, name=webhook_name)
+                        changed = True
+                except Exception, e:
+                    module.fail_json(msg='%s' % e.message)
 
             if kwargs:
                 policy.update(**kwargs)
@@ -250,6 +261,7 @@ def main():
             is_percent=dict(type='bool', default=False),
             name=dict(required=True),
             policy_type=dict(required=True, choices=['webhook', 'schedule']),
+            webhook_name=dict(),
             scaling_group=dict(required=True),
             state=dict(default='present', choices=['present', 'absent']),
         )
@@ -275,6 +287,7 @@ def main():
     is_percent = module.params.get('is_percent')
     name = module.params.get('name')
     policy_type = module.params.get('policy_type')
+    webhook_name = module.params.get('webhook_name')
     scaling_group = module.params.get('scaling_group')
     state = module.params.get('state')
 
@@ -282,11 +295,14 @@ def main():
         module.fail_json(msg='policy_type=schedule is required for a time '
                              'based policy')
 
+    if webhook_name and policy_type == 'schedule':
+        module.fail_json(msg='policy_type=webhook is required when webhook_name defined')
+
     setup_rax_module(module, pyrax)
 
     rax_asp(module, at=at, change=change, cron=cron, cooldown=cooldown,
             desired_capacity=desired_capacity, is_percent=is_percent,
-            name=name, policy_type=policy_type, scaling_group=scaling_group,
+            name=name, policy_type=policy_type, webhook_name=webhook_name, scaling_group=scaling_group,
             state=state)
 
 
