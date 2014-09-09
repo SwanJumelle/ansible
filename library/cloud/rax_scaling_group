@@ -184,8 +184,8 @@ def rax_asg(module, cooldown=300, disk_config=None, files={}, flavor=None,
         lbs = []
         if loadbalancers:
             for lb in loadbalancers:
-                lb_id = lb.get('id')
-                port = lb.get('port')
+                lb_id = int(lb.get('id'))
+                port = int(lb.get('port'))
                 if not lb_id or not port:
                     continue
                 lbs.append((lb_id, port))
