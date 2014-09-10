@@ -218,9 +218,9 @@ def rax_asp(module, at=None, change=0, cron=None, cooldown=300,
         policy.get()
 
         if webhook_name and policy_type == 'webhook':
-            module.exit_json(changed=changed, autoscale_policy=to_dict(policy), webhook_policy=to_dict(webhook))
+            module.exit_json(changed=changed, autoscale_policy=rax_to_dict(policy), webhook_policy=rax_to_dict(webhook))
         else:
-            module.exit_json(changed=changed, autoscale_policy=to_dict(policy))
+            module.exit_json(changed=changed, autoscale_policy=rax_to_dict(policy))
     else:
         try:
             policies = filter(lambda p: name == p.name, sg.list_policies())
